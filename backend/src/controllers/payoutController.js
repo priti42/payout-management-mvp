@@ -1,5 +1,14 @@
 const { validationResult } = require('express-validator');
 const Payout = require('../models/Payout');
+const PayoutAudit = require('../models/PayoutAudit');
+
+const logPayoutAudit = async (payoutId, action, userId) => {
+  await PayoutAudit.create({
+    payout_id: payoutId,
+    action,
+    performed_by: userId,
+  });
+};
 
 const applyStatusTransition = (payout, targetStatus, { reason } = {}) => {
   const current = payout.status;
@@ -45,6 +54,8 @@ const createPayout = async (req, res, next) => {
       decision_reason: req.body.decision_reason,
     });
 
+    await logPayoutAudit(payout._id, 'CREATED', req.user.id);
+
     res.status(201).json(payout);
   } catch (err) {
     next(err);
@@ -85,6 +96,8 @@ const submitPayout = async (req, res, next) => {
     applyStatusTransition(payout, 'Submitted');
     await payout.save();
 
+    await logPayoutAudit(payout._id, 'SUBMITTED', req.user.id);
+
     res.json(payout);
   } catch (err) {
     next(err);
@@ -102,6 +115,8 @@ const approvePayout = async (req, res, next) => {
 
     applyStatusTransition(payout, 'Approved');
     await payout.save();
+
+    await logPayoutAudit(payout._id, 'APPROVED', req.user.id);
 
     res.json(payout);
   } catch (err) {
@@ -130,6 +145,8 @@ const rejectPayout = async (req, res, next) => {
       reason: req.body.reason,
     });
     await payout.save();
+
+    await logPayoutAudit(payout._id, 'REJECTED', req.user.id);
 
     res.json(payout);
   } catch (err) {
