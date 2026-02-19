@@ -1,7 +1,13 @@
 const express = require('express');
 const { body, query } = require('express-validator');
 const { verifyJWT, requireRole } = require('../middlewares/auth');
-const { createPayout, listPayouts } = require('../controllers/payoutController');
+const {
+  createPayout,
+  listPayouts,
+  submitPayout,
+  approvePayout,
+  rejectPayout,
+} = require('../controllers/payoutController');
 
 const router = express.Router();
 
@@ -38,6 +44,27 @@ router.get(
     query('vendor').optional().isString(),
   ],
   listPayouts
+);
+
+router.post(
+  '/:id/submit',
+  [requireRole('OPS')],
+  submitPayout
+);
+
+router.post(
+  '/:id/approve',
+  [requireRole('FINANCE')],
+  approvePayout
+);
+
+router.post(
+  '/:id/reject',
+  [
+    requireRole('FINANCE'),
+    body('reason').trim().notEmpty().withMessage('reason is required'),
+  ],
+  rejectPayout
 );
 
 module.exports = router;
